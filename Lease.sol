@@ -37,7 +37,7 @@ contract Lease is ERC721Metadata, ERC721Full {
             roomId = ownerRoomList[i];
             buyerAddress = getApproved(roomId);
             require(buyerAddress != address(0)); //所有者が存在するか
-            require(fun(paymentDay[roomId])); //30日経過済みかどうか
+            require(canPayToOwner(roomId)); //30日経過済みかどうか
             rent = getRent(roomId);
             for(uint j = 0; j< fun(paymentDay[roomId]); j++){
                 require(deposit[buyerAddress] >= rent);
