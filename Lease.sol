@@ -15,16 +15,16 @@ contract Lease is ERC721Metadata, ERC721Full {
 
 
     mapping(address => uint) deposit;
-    mapping(uint256 => bool) isNotPayed; //id =>
     mapping(uint256 => uint) paymentDay; //id =>
+    mapping(uint256 => uint) rent; //id => rent finney
 
     function setPaymentDay(uint256 tokenId) internal {
         paymentDay[tokenId] = block.timestamp;
     }
 
     function canPayToOwner(uint256 tokenId) public view returns (bool) {
-        require(block.timestamp >= paymentDay[tokenId].add(30 days));
-        return true;
+        return (block.timestamp >= paymentDay[tokenId].add(30 days));
+
     }
 
     function depositMoney() internal {
@@ -32,26 +32,37 @@ contract Lease is ERC721Metadata, ERC721Full {
     }
 
     function payToOwner() internal {
-        uint256[] ownerRoomList = _tokensOfOwner(msg.sender);
+        uint256[] memory ownerRoomList = _tokensOfOwner(msg.sender);
         for (uint i = 0; i< ownerRoomList.length; i++){
-            roomId = ownerRoomList[i];
-            buyerAddress = getApproved(roomId);
-            require(buyerAddress != address(0)); //所有者が存在するか
-            require(canPayToOwner(roomId)); //30日経過済みかどうか
-            rent = getRent(roomId);
-            for(uint j = 0; j< fun(paymentDay[roomId]); j++){
-                require(deposit[buyerAddress] >= rent);
+            uint256 roomId = ownerRoomList[i];
+            address buyerAddress = getApproved(roomId);
 
+            //購入者が存在するか  30日経過済みかどうか
+            if (buyerAddress != address(0) && canPayToOwner(roomId)){
+                uint irent = rent[roomId]; //finney
+                while(canPayToOwner(roomId)){
+                    //デポジットが足りてるかどうか
+                    if(deposit[buyerAddress] >= irent){
+                        msg.sender.transfer(irent);
+                        paymentDay[roomId].add(30 days);
+                    } else{
+                        if(block.timestamp >= paymentDay[roomId].add(60 days)){
+                            clearApproval(roomId);
+                        }
+                    }
+                }
             }
         }
     }
 
-    function mintRoom(string memory _tokenURI) public payable returns(bool){
+    function mintRoom(string memory _tokenURI, uint irent) public payable returns(bool){
         require(msg.sender != address(0));
         require(msg.value == mintFee);
         uint256 newTokenId = _getNextTokenId();
         _mint(msg.sender, newTokenId);
         _setTokenURI(newTokenId, _tokenURI);
+        rent[newTokenId] = irent;
+        paymentDay[newTokenId] = block.timestamp;
         depositMoney();
         return true;
     }
