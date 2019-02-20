@@ -18,7 +18,7 @@ contract Lease is ERC721Metadata, ERC721Full {
     mapping(uint256 => uint) paymentDay; //id =>
     mapping(uint256 => uint) rent; //id => rent finney
 
-    function setPaymentDay(uint256 tokenId) internal {
+    function setPaymentDay(uint256 tokenId) private {
         paymentDay[tokenId] = block.timestamp;
     }
 
@@ -27,12 +27,14 @@ contract Lease is ERC721Metadata, ERC721Full {
 
     }
 
-    function depositMoney() internal {
-      deposit[msg.sender] += msg.value;
+    function depositMoney() public payable {
+        require(msg.sender != address(0));
+        deposit[msg.sender] += msg.value;
     }
 
-    function payToOwner() internal {
+    function payToOwner() public {
         uint256[] memory ownerRoomList = _tokensOfOwner(msg.sender);
+        require(ownerRoomList.length > 0);
         for (uint i = 0; i< ownerRoomList.length; i++){
             uint256 roomId = ownerRoomList[i];
             address buyerAddress = getApproved(roomId);
@@ -57,7 +59,7 @@ contract Lease is ERC721Metadata, ERC721Full {
 
     function mintRoom(string memory _tokenURI, uint irent) public payable returns(bool){
         require(msg.sender != address(0));
-        require(msg.value == mintFee);
+        require(msg.value >= mintFee);
         uint256 newTokenId = _getNextTokenId();
         _mint(msg.sender, newTokenId);
         _setTokenURI(newTokenId, _tokenURI);
@@ -71,11 +73,8 @@ contract Lease is ERC721Metadata, ERC721Full {
         return totalSupply().add(1);
     }
 
-    function clearApproval(uint256 tokenId) public {
+    function clearApproval(uint256 tokenId) private {
         address none = address(0);
         approve(none, tokenId);
     }
-
-
-
 }
