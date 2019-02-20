@@ -9,7 +9,7 @@ contract Lease is ERC721Metadata, ERC721Full {
     using SafeMath for uint256;
 
     constructor() public payable
-    ERC721Full("Estate", "ZAT"){}
+    ERC721Full("LEthRoom", "LER"){}
 
     uint256 private mintFee = 0.1 ether;
 
