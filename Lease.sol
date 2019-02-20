@@ -12,22 +12,38 @@ contract Lease is ERC721Metadata, ERC721Full {
     ERC721Full("Estate", "ZAT"){}
 
     uint256 private mintFee = 0.1 ether;
-    
-    
+
+
     mapping(address => uint) deposit;
-    mapping(address => uint) public timeStamp;
-    
-    function set() public {
-        timeStamp[msg.sender] = block.timestamp;
+    mapping(uint256 => bool) isNotPayed; //id =>
+    mapping(uint256 => uint) paymentDay; //id =>
+
+    function setPaymentDay(uint256 tokenId) internal {
+        paymentDay[tokenId] = block.timestamp;
     }
-    
-    function get() public view returns (bool) {
-        require(block.timestamp >= timeStamp[msg.sender].add(30 days));
+
+    function canPayToOwner(uint256 tokenId) public view returns (bool) {
+        require(block.timestamp >= paymentDay[tokenId].add(30 days));
         return true;
     }
 
     function depositMoney() internal {
       deposit[msg.sender] += msg.value;
+    }
+
+    function payToOwner() internal {
+        uint256[] ownerRoomList = _tokensOfOwner(msg.sender);
+        for (uint i = 0; i< ownerRoomList.length; i++){
+            roomId = ownerRoomList[i];
+            buyerAddress = getApproved(roomId);
+            require(buyerAddress != address(0)); //所有者が存在するか
+            require(fun(paymentDay[roomId])); //30日経過済みかどうか
+            rent = getRent(roomId);
+            for(uint j = 0; j< fun(paymentDay[roomId]); j++){
+                require(deposit[buyerAddress] >= rent);
+
+            }
+        }
     }
 
     function mintRoom(string memory _tokenURI) public payable returns(bool){
@@ -39,17 +55,16 @@ contract Lease is ERC721Metadata, ERC721Full {
         depositMoney();
         return true;
     }
-    
+
     function _getNextTokenId() private view returns (uint256) {
-        return totalSupply().add(1); 
+        return totalSupply().add(1);
     }
-    
+
     function clearApproval(uint256 tokenId) public {
         address none = address(0);
         approve(none, tokenId);
     }
-    
-    
-    
-}
 
+
+
+}
