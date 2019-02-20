@@ -1,53 +1,55 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.2;
 
-import "openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol";
-import "openzeppelin-solidity/blob/master/contracts/math/SafeMath.sol";
+import "github.com/OpenZeppelin/openzeppelin-solidity/contracts/token/ERC721/ERC721Full.sol";
+import "github.com/OpenZeppelin/openzeppelin-solidity/contracts/token/ERC721/ERC721Metadata.sol";
+import "github.com/OpenZeppelin/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
-contract Lease is ERC721Full {
-    using SafeMath for uint;
 
-    constructor() public
+contract Lease is ERC721Metadata, ERC721Full {
+    using SafeMath for uint256;
+
+    constructor() public payable
     ERC721Full("Estate", "ZAT"){}
 
-    struct Room {
-        address realOwner,
-        uint256 fee
+    uint256 private mintFee = 0.1 ether;
+    
+    
+    mapping(address => uint) deposit;
+    mapping(address => uint) public timeStamp;
+    
+    function set() public {
+        timeStamp[msg.sender] = block.timestamp;
+    }
+    
+    function get() public view returns (bool) {
+        require(block.timestamp >= timeStamp[msg.sender].add(30 days));
+        return true;
     }
 
-    Room[] public rooms;
-
-    mapping (address => mapping(uint256 => Room)) ownerToRoom;
-
-    uint256 private mintFee = 0 ether;
-
-    mapping(address => uint) deposit;
-
-    function deposit() internal payable{
+    function depositMoney() internal {
       deposit[msg.sender] += msg.value;
     }
 
-    function mintRoom(uint128 _fee) external payable returns(bool) {
+    function mintRoom(string memory _tokenURI) public payable returns(bool){
         require(msg.sender != address(0));
         require(msg.value == mintFee);
-
-        Room memory _room = Room({realOwner: msg.sender, uint128: _fee});
-        uint256 tokenId = rooms.push(_room) - 1;
-        ownerToRoom[msg.sender][tokenId] = _room;
-        super._mint(msg.sender, tokenId);
-        deposit();
+        uint256 newTokenId = _getNextTokenId();
+        _mint(msg.sender, newTokenId);
+        _setTokenURI(newTokenId, _tokenURI);
+        depositMoney();
         return true;
     }
-
-    function transferRoom(address to, uint256 tokenId) external payable returns(bool) {
-        require(msg.sender != address(0));
-        require(msg.value == ownerToRoom[msg.sender][tokenId].fee.mul(3) )
-        super._transferFrom(msg.sender, to, tokenId);
-        return true;
+    
+    function _getNextTokenId() private view returns (uint256) {
+        return totalSupply().add(1); 
     }
-
-    function setRealOwnerFee(uint128 _fee) external onlyOwner {
-        mintFee = _fee;
+    
+    function clearApproval(uint256 tokenId) public {
+        address none = address(0);
+        approve(none, tokenId);
     }
-
-
+    
+    
+    
 }
+
