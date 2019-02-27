@@ -18,7 +18,7 @@ contract Lease is ERC721Metadata, ERC721Full {
     mapping(uint256 => uint) paymentDay; //id =>
     mapping(uint256 => uint) rent; //id => rent finney
 
-    function setPaymentDay(uint256 tokenId) private {
+    function initPaymentDay(uint256 tokenId) private {
         paymentDay[tokenId] = block.timestamp;
     }
 
@@ -35,26 +35,40 @@ contract Lease is ERC721Metadata, ERC721Full {
     function payToOwner() public {
         uint256[] memory ownerRoomList = _tokensOfOwner(msg.sender);
         require(ownerRoomList.length > 0);
+
+        //roomId loop
         for (uint i = 0; i< ownerRoomList.length; i++){
             uint256 roomId = ownerRoomList[i];
             address buyerAddress = getApproved(roomId);
+            uint totalPay = 0;
 
             //購入者が存在するか  30日経過済みかどうか
             if (buyerAddress != address(0) && canPayToOwner(roomId)){
-                uint irent = rent[roomId]; //finney
-                while(canPayToOwner(roomId)){
-                    //デポジットが足りてるかどうか
-                    if(deposit[buyerAddress] >= irent){
-                        msg.sender.transfer(irent);
-                        paymentDay[roomId].add(30 days);
-                    } else{
-                        if(block.timestamp >= paymentDay[roomId].add(60 days)){
-                            clearApproval(roomId);
-                        }
-                    }
+                uint irent = rent[roomId];//wei
+                uint ipaymentDay = paymentDay[roomId];
+
+                //切り捨てが前提
+                uint needPayTime = (block.timestamp - ipaymentDay) / (30 days);
+                uint canPayTime = deposit[buyerAddress] / irent;
+
+                //普通に払える場合
+                if(canPayTime >= needPayTime){
+                  irent = irent * needPayTime;
+                  paymentDay[roomId] = paymentDay[roomId].add((30 days) * needPayTime);
+                }else{
+                  //全ては払えない場合
+                  irent = irent * canPayTime;
+                  paymentDay[roomId] = paymentDay[roomId].add((30 days) * canPayTime);
+                  //2ヶ月以上滞納している場合
+                  if(needPayTime - canPayTime >= 2){ clearApproval(roomId); }
                 }
+
+                totalPay += irent;
+                deposit[buyerAddress] -= irent;
             }
         }
+
+        msg.sender.transfer(totalPay);
     }
 
     function mintRoom(string memory _tokenURI, uint irent) public payable returns(bool){
@@ -71,6 +85,11 @@ contract Lease is ERC721Metadata, ERC721Full {
 
     function _getNextTokenId() private view returns (uint256) {
         return totalSupply().add(1);
+    }
+
+    function ownerApprove(address to, uint256 newTokenId) public {
+      approve(to, newTokenId);
+      initPaymentDay(newTokenId);
     }
 
     function clearApproval(uint256 tokenId) private {
