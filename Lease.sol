@@ -18,6 +18,10 @@ contract Lease is ERC721Metadata, ERC721Full {
     mapping(uint256 => uint) paymentDay; //id =>
     mapping(uint256 => uint) rent; //id => rent finney
 
+    function balance() public view returns (uint) {
+      return deposit[msg.sender];
+    }
+
     function initPaymentDay(uint256 tokenId) private {
         paymentDay[tokenId] = block.timestamp;
     }
@@ -35,12 +39,12 @@ contract Lease is ERC721Metadata, ERC721Full {
     function payToOwner() public {
         uint256[] memory ownerRoomList = _tokensOfOwner(msg.sender);
         require(ownerRoomList.length > 0);
+        uint totalPay = 0;
 
         //roomId loop
         for (uint i = 0; i< ownerRoomList.length; i++){
             uint256 roomId = ownerRoomList[i];
             address buyerAddress = getApproved(roomId);
-            uint totalPay = 0;
 
             //購入者が存在するか  30日経過済みかどうか
             if (buyerAddress != address(0) && canPayToOwner(roomId)){
@@ -73,13 +77,11 @@ contract Lease is ERC721Metadata, ERC721Full {
 
     function mintRoom(string memory _tokenURI, uint irent) public payable returns(bool){
         require(msg.sender != address(0));
-        require(msg.value >= mintFee);
+        require(deposit[msg.sender] >= mintFee);
         uint256 newTokenId = _getNextTokenId();
         _mint(msg.sender, newTokenId);
         _setTokenURI(newTokenId, _tokenURI);
         rent[newTokenId] = irent;
-        paymentDay[newTokenId] = block.timestamp;
-        depositMoney();
         return true;
     }
 
