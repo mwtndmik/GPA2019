@@ -1,0 +1,16 @@
+{
+    "name": "Maison de Seine",
+    "tokenId": "1",
+    "description": {
+        "homeAddress": "3, Maeyamacho, Showa-ku Nagoya-shi, Aichi",
+        "rent": "2000000000000000000",
+        "layout": "1LDK",
+        "area": "17.01m^2",
+        "floor": "2",
+        "description": "south",
+        "builtYear": "1987",
+        "kind": "mansion"
+    },
+    "image": "https://gateway.ipfs.io/ipfs/QmZUoTF6STANpVTK1RHiC1kCrj5Zg3nSqMNeZWYuQ9ZT6h"
+}
+
