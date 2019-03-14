@@ -1,0 +1,3 @@
+[submodule "LEthRoom"]
+	path = LEthRoom
+	url = git@github.com:mwtndmik/GPA2019.git
